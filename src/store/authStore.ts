@@ -17,7 +17,7 @@ interface AuthState {
 
 // Demo mode: auto-login with mock user
 const DEMO_USER: User = {
-  id: 'demo-user-001',
+  id: '1',
   email: 'demo@example.com',
   name: 'Demo User',
 };

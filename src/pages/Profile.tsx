@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Link, useNavigate } from "react-router-dom";
@@ -6,20 +6,13 @@ import { useAuthStore } from "@/store/authStore";
 import { client } from "@/lib/api";
 import { LogOut, Settings } from "lucide-react";
 
-interface UserOC {
-  id: string;
+interface Character {
+  id: number;
   name: string;
   image: string;
-  style: string;
+  styleId: string;
   likes: number;
 }
-
-const mockUserOCs: UserOC[] = [
-  { id: "1", name: "星辰魔法师", image: "🧙‍♂️", style: "fantasy", likes: 128 },
-  { id: "2", name: "赛博武士", image: "🥷", style: "cyberpunk", likes: 256 },
-  { id: "3", name: "森林精灵", image: "🧝‍♀️", style: "fantasy", likes: 189 },
-  { id: "4", name: "机甲战士", image: "🤖", style: "cyberpunk", likes: 312 },
-];
 
 const features = [
   { icon: "🎮", title: "游戏头像", desc: "生成游戏风格头像", path: "/avatar" },
@@ -32,8 +25,33 @@ const features = [
 
 export default function Profile() {
   const [activeTab, setActiveTab] = useState<"ocs" | "liked" | "collected">("ocs");
+  const [characters, setCharacters] = useState<Character[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
   const { user, reset } = useAuthStore();
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchCharacters = async () => {
+      if (activeTab === "ocs") {
+        setIsLoading(true);
+        try {
+          const res = await client.api.fetch("/api/characters/my");
+          const data = await res.json();
+          if (data.characters) {
+            setCharacters(data.characters);
+          }
+        } catch (error) {
+          console.error("Failed to fetch characters:", error);
+        } finally {
+          setIsLoading(false);
+        }
+      }
+    };
+
+    if (user) {
+      fetchCharacters();
+    }
+  }, [activeTab, user]);
 
   const handleLogout = async () => {
     await client.auth.signOut();
@@ -155,26 +173,42 @@ export default function Profile() {
 
         {/* OC Grid */}
         <div className="grid grid-cols-2 gap-4">
-          {mockUserOCs.map((oc, index) => (
-            <motion.div
-              key={oc.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
-              className="pixel-card overflow-hidden"
-            >
-              <div className="aspect-square bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center text-6xl">
-                {oc.image}
-              </div>
-              <div className="p-3">
-                <h4 className="font-bold mb-1">{oc.name}</h4>
-                <div className="flex justify-between text-sm text-gray-600">
-                  <span>{oc.style}</span>
-                  <span>❤️ {oc.likes}</span>
-                </div>
-              </div>
-            </motion.div>
-          ))}
+          {isLoading ? (
+            <div className="col-span-2 py-10 text-center text-gray-500">
+              加载中...
+            </div>
+          ) : (
+            <>
+              {characters.map((oc, index) => (
+                <motion.div
+                  key={oc.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: index * 0.1 }}
+                  className="pixel-card overflow-hidden"
+                >
+                  <div className="aspect-square bg-gradient-to-br from-primary/10 to-secondary/10 flex items-center justify-center text-6xl overflow-hidden">
+                    {oc.image.startsWith("http") ? (
+                      <img
+                        src={oc.image}
+                        alt={oc.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      oc.image
+                    )}
+                  </div>
+                  <div className="p-3">
+                    <h4 className="font-bold mb-1 truncate">{oc.name}</h4>
+                    <div className="flex justify-between text-sm text-gray-600">
+                      <span className="capitalize">{oc.styleId}</span>
+                      <span>❤️ {oc.likes || 0}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </>
+          )}
 
           {/* Create New OC Card */}
           <Link to="/create">

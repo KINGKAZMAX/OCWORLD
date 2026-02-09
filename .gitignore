@@ -1,0 +1,9 @@
+node_modules
+dist
+.DS_Store
+backend/data/
+backend/.env
+.env.local
+.vercel
+plan.md
+chat/

@@ -1,5 +1,4 @@
-import { useRef, useEffect, useState } from 'react';
-import { client } from '@/lib/api';
+import { useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { motion } from 'framer-motion';
 
@@ -8,8 +7,8 @@ function PixelAvatarLogo({ className = "" }: { className?: string }) {
   return (
     <div className={`relative ${className}`}>
       {/* Main avatar silhouette - pixel art style */}
-      <svg 
-        viewBox="0 0 32 32" 
+      <svg
+        viewBox="0 0 32 32"
         className="w-full h-full"
         style={{ imageRendering: 'pixelated' }}
       >
@@ -17,27 +16,27 @@ function PixelAvatarLogo({ className = "" }: { className?: string }) {
         <rect x="8" y="2" width="16" height="2" fill="currentColor" />
         <rect x="6" y="4" width="20" height="2" fill="currentColor" />
         <rect x="6" y="6" width="20" height="2" fill="currentColor" />
-        
+
         {/* Hair - sides */}
         <rect x="4" y="8" width="4" height="8" fill="currentColor" />
         <rect x="24" y="8" width="4" height="8" fill="currentColor" />
-        
+
         {/* Face area */}
         <rect x="8" y="8" width="16" height="12" fill="currentColor" />
-        
+
         {/* Eyes - subtle glow */}
         <rect x="10" y="12" width="4" height="2" fill="white" opacity="0.3" />
         <rect x="18" y="12" width="4" height="2" fill="white" opacity="0.3" />
-        
+
         {/* Neck */}
         <rect x="12" y="20" width="8" height="4" fill="currentColor" />
-        
+
         {/* Shoulders */}
         <rect x="4" y="24" width="24" height="2" fill="currentColor" />
         <rect x="2" y="26" width="28" height="4" fill="currentColor" />
         <rect x="4" y="30" width="24" height="2" fill="currentColor" />
       </svg>
-      
+
       {/* Sparkle decorations around the logo */}
       <div className="absolute -top-1 -left-1 w-2 h-2 bg-[#FF99C8]" />
       <div className="absolute -top-2 right-1 w-2 h-2 bg-[#5DE2E7]" />
@@ -48,64 +47,19 @@ function PixelAvatarLogo({ className = "" }: { className?: string }) {
 }
 
 export default function Login() {
-  const containerRef = useRef<HTMLDivElement>(null);
-  const authRenderedRef = useRef(false);
-  const [isReady, setIsReady] = useState(false);
   const { setUser } = useAuthStore();
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
-  // Double-check session (prevent race conditions)
-  useEffect(() => {
-    client.auth.getSession().then(session => {
-      if (session.data?.user) {
-        setUser({
-          id: session.data.user.id,
-          email: session.data.user.email,
-          name: session.data.user.name || '',
-        });
-      } else {
-        setIsReady(true);
-      }
-    });
-  }, [setUser]);
-
-  // Render managed login UI (execute only once)
-  useEffect(() => {
-    if (!isReady || authRenderedRef.current || !containerRef.current) return;
-    authRenderedRef.current = true;
-
-    client.auth.renderAuthUI(containerRef.current, {
-      redirectTo: '/create',
-      onLogin: (user) => {
-        setUser({ id: user.id, email: user.email, name: user.name || '' });
-      },
-      labels: {
-        signIn: {
-          title: '歡迎回來',
-          subtitle: '登錄以創建你的專屬角色',
-          loginButton: '登錄',
-          emailPlaceholder: '輸入郵箱',
-          passwordPlaceholder: '輸入密碼',
-          forgotPassword: '忘記密碼?',
-          signUpPrompt: '還沒有帳戶?',
-          toggleToSignUp: '立即註冊',
-        },
-        signUp: {
-          title: '加入 OC World',
-          subtitle: '註冊開始創建你的 OC 角色',
-          signUpButton: '註冊',
-          toggleToSignIn: '已有帳戶? 登錄',
-        },
-      },
-    });
-  }, [isReady, setUser]);
-
-  if (!isReady) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="w-16 h-16 border-8 border-black border-t-primary animate-spin" />
-      </div>
-    );
-  }
+  const handleDemoLogin = () => {
+    setIsLoggingIn(true);
+    setTimeout(() => {
+      setUser({
+        id: '1',
+        email: 'demo@example.com',
+        name: 'Demo User',
+      });
+    }, 300);
+  };
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 relative overflow-hidden bg-gradient-to-b from-gray-50 to-white">
@@ -142,9 +96,9 @@ export default function Login() {
         className="text-center mb-8 z-10"
       >
         <div className="flex items-center justify-center mb-6">
-          <motion.div 
+          <motion.div
             className="relative"
-            animate={{ 
+            animate={{
               y: [0, -4, 0],
             }}
             transition={{
@@ -160,24 +114,31 @@ export default function Login() {
             </div>
           </motion.div>
         </div>
-        
+
         <h1 className="text-3xl md:text-4xl font-bold mb-2 gradient-text">
           OC WORLD
         </h1>
         <p className="text-gray-500 text-sm">AI 原創角色社區</p>
       </motion.div>
 
-      {/* Auth Container */}
+      {/* Demo Login */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
         transition={{ delay: 0.2 }}
         className="w-full max-w-[420px] min-w-[320px] z-10"
       >
-        <div 
-          ref={containerRef} 
-          className="pixel-auth-container"
-        />
+        <div className="pixel-card p-8 bg-white text-center">
+          <h2 className="font-bold text-xl mb-2">歡迎來到 OC World</h2>
+          <p className="text-gray-500 text-sm mb-6">點擊下方按鈕以 Demo 身份登入</p>
+          <button
+            onClick={handleDemoLogin}
+            disabled={isLoggingIn}
+            className="w-full py-3 px-6 bg-gradient-to-r from-gray-800 to-gray-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
+          >
+            {isLoggingIn ? '登入中...' : 'Demo 登入'}
+          </button>
+        </div>
       </motion.div>
 
       {/* Bottom tagline */}

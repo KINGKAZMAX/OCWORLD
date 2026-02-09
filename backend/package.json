@@ -9,11 +9,14 @@
   },
   "dependencies": {
     "@google/genai": "^1.37.0",
+    "better-sqlite3": "^11.8.1",
+    "dotenv": "^16.5.0",
     "drizzle-orm": "^0.44.7",
     "hono": "^4.10.5"
   },
   "devDependencies": {
     "@hono/node-server": "^1.19.9",
+    "@types/better-sqlite3": "^7.6.13",
     "@types/node": "^22.0.0",
     "tsx": "^4.21.0",
     "typescript": "^5.9.3"

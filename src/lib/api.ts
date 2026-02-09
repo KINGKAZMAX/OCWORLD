@@ -1,12 +1,28 @@
-import { createEdgeSpark } from "@edgespark/client";
-import "@edgespark/client/styles.css";
+// Local API client - replaces @edgespark/client with standard fetch
 
-// Use local backend in development, cloud in production
-const isLocal = import.meta.env.DEV && import.meta.env.VITE_USE_LOCAL_BACKEND === 'true';
-const WORKER_URL = isLocal 
-  ? "http://localhost:3001" 
-  : "https://staging--hp9ysdfdfpe5mvdu7bt3.youbase.cloud";
-
-export const client = createEdgeSpark({ baseUrl: WORKER_URL });
-
-export { WORKER_URL };
+export const client = {
+  api: {
+    fetch: (url: string, options?: RequestInit) =>
+      fetch(url, { ...options, credentials: "include" as RequestCredentials }),
+  },
+  auth: {
+    getSession: async () => {
+      try {
+        const res = await fetch("/api/auth/session", { credentials: "include" });
+        return await res.json();
+      } catch {
+        return { data: null };
+      }
+    },
+    signOut: async () => {
+      try {
+        await fetch("/api/auth/signout", { method: "POST", credentials: "include" });
+      } catch {
+        // ignore
+      }
+    },
+    renderAuthUI: () => {
+      // no-op: replaced by Login.tsx demo button
+    },
+  },
+};
