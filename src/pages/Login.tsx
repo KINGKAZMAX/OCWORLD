@@ -1,6 +1,33 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useAuthStore } from '@/store/authStore';
 import { motion } from 'framer-motion';
+
+declare global {
+  interface Window {
+    google?: {
+      accounts: {
+        id: {
+          initialize: (config: {
+            client_id: string;
+            callback: (response: { credential: string }) => void;
+            auto_select?: boolean;
+          }) => void;
+          renderButton: (
+            element: HTMLElement,
+            config: {
+              theme?: string;
+              size?: string;
+              width?: number;
+              text?: string;
+              shape?: string;
+              locale?: string;
+            }
+          ) => void;
+        };
+      };
+    };
+  }
+}
 
 // Pixel Art Character Avatar Silhouette Logo
 function PixelAvatarLogo({ className = "" }: { className?: string }) {
@@ -49,16 +76,69 @@ function PixelAvatarLogo({ className = "" }: { className?: string }) {
 export default function Login() {
   const { setUser } = useAuthStore();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const googleButtonRef = useRef<HTMLDivElement>(null);
 
-  const handleDemoLogin = () => {
-    setIsLoggingIn(true);
-    setTimeout(() => {
-      setUser({
-        id: '1',
-        email: 'demo@example.com',
-        name: 'Demo User',
+  const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+  useEffect(() => {
+    if (!googleClientId || !googleButtonRef.current) return;
+
+    const initGoogle = () => {
+      if (!window.google) return;
+
+      window.google.accounts.id.initialize({
+        client_id: googleClientId,
+        callback: handleGoogleCallback,
       });
-    }, 300);
+
+      window.google.accounts.id.renderButton(googleButtonRef.current!, {
+        theme: 'outline',
+        size: 'large',
+        width: 320,
+        text: 'signin_with',
+        shape: 'rectangular',
+      });
+    };
+
+    // GIS SDK might not be loaded yet
+    if (window.google) {
+      initGoogle();
+    } else {
+      const interval = setInterval(() => {
+        if (window.google) {
+          clearInterval(interval);
+          initGoogle();
+        }
+      }, 100);
+      return () => clearInterval(interval);
+    }
+  }, [googleClientId]);
+
+  const handleGoogleCallback = async (response: { credential: string }) => {
+    setIsLoggingIn(true);
+    setError(null);
+
+    try {
+      const res = await fetch('/api/auth/google', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken: response.credential }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        setError(data.error || '登入失敗');
+        setIsLoggingIn(false);
+        return;
+      }
+
+      setUser(data.user);
+    } catch {
+      setError('網路錯誤，請稍後再試');
+      setIsLoggingIn(false);
+    }
   };
 
   return (
@@ -121,7 +201,7 @@ export default function Login() {
         <p className="text-gray-500 text-sm">AI 原創角色社區</p>
       </motion.div>
 
-      {/* Demo Login */}
+      {/* Google Login */}
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -130,14 +210,25 @@ export default function Login() {
       >
         <div className="pixel-card p-8 bg-white text-center">
           <h2 className="font-bold text-xl mb-2">歡迎來到 OC World</h2>
-          <p className="text-gray-500 text-sm mb-6">點擊下方按鈕以 Demo 身份登入</p>
-          <button
-            onClick={handleDemoLogin}
-            disabled={isLoggingIn}
-            className="w-full py-3 px-6 bg-gradient-to-r from-gray-800 to-gray-600 text-white font-bold rounded-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50"
-          >
-            {isLoggingIn ? '登入中...' : 'Demo 登入'}
-          </button>
+          <p className="text-gray-500 text-sm mb-6">使用 Google 帳號登入</p>
+
+          {error && (
+            <div className="mb-4 p-3 bg-red-50 text-red-600 text-sm rounded-lg">
+              {error}
+            </div>
+          )}
+
+          {isLoggingIn ? (
+            <div className="py-3 text-gray-500">登入中...</div>
+          ) : googleClientId ? (
+            <div className="flex justify-center">
+              <div ref={googleButtonRef} />
+            </div>
+          ) : (
+            <p className="text-gray-400 text-sm">
+              Google Client ID 未配置，請在 .env.local 中設定 VITE_GOOGLE_CLIENT_ID
+            </p>
+          )}
         </div>
       </motion.div>
 

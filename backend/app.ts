@@ -4,16 +4,35 @@
  */
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { GoogleGenAI } from "@google/genai";
 import { eq, desc, sql, and, or, ne, inArray } from "drizzle-orm";
 
 // ---------- Types ----------
 type Env = { Variables: { user: { id: string; email: string; name: string } } };
-const DEMO_USER = { id: "1", email: "demo@example.com", name: "Demo User" };
 
-function requireAuth(c: any, next: any) {
-  c.set("user", DEMO_USER);
-  return next();
+// ---------- AI API helper ----------
+async function callAI(apiKey: string, prompt: string): Promise<string> {
+  const response = await fetch(
+    "https://back.zaiwenai.com/api/v1/ai/chat/completions",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: "gemini-3-pro",
+        messages: [{ role: "user", content: prompt }],
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`AI API error ${response.status}: ${errorText}`);
+  }
+
+  const data = await response.json();
+  return data.choices?.[0]?.message?.content || "";
 }
 
 // ---------- Prompt templates ----------
@@ -99,6 +118,32 @@ const MOCK_OC_SKILLS: Record<number, number[]> = {};
 // ================================================
 export function createApp(db: any, tables: any) {
   const app = new Hono<Env>();
+
+  // ---------- requireAuth middleware ----------
+  async function requireAuth(c: any, next: any) {
+    const authHeader = c.req.header("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return c.json({ error: "Unauthorized" }, 401);
+    }
+
+    const userId = authHeader.replace("Bearer ", "");
+    const [user] = await db
+      .select()
+      .from(tables.users)
+      .where(eq(tables.users.id, parseInt(userId)))
+      .limit(1);
+
+    if (!user) {
+      return c.json({ error: "User not found" }, 401);
+    }
+
+    c.set("user", {
+      id: String(user.id),
+      email: user.email,
+      name: user.nickname || user.email,
+    });
+    return next();
+  }
 
   // ---------- Helper: update OC relationship ----------
   async function updateOCRelationship(
@@ -198,12 +243,111 @@ export function createApp(db: any, tables: any) {
   // ============================================
   // Auth Endpoints
   // ============================================
-  app.get("/api/auth/session", (c) => {
-    return c.json({ data: { user: DEMO_USER } });
+  app.get("/api/auth/session", async (c) => {
+    const authHeader = c.req.header("Authorization");
+    if (!authHeader || !authHeader.startsWith("Bearer ")) {
+      return c.json({ data: { user: null } });
+    }
+
+    const userId = authHeader.replace("Bearer ", "");
+    const [user] = await db
+      .select()
+      .from(tables.users)
+      .where(eq(tables.users.id, parseInt(userId)))
+      .limit(1);
+
+    if (!user) {
+      return c.json({ data: { user: null } });
+    }
+
+    return c.json({
+      data: {
+        user: {
+          id: String(user.id),
+          email: user.email,
+          name: user.nickname || user.email,
+          avatar: user.avatar,
+        },
+      },
+    });
   });
 
   app.post("/api/auth/signout", (c) => {
     return c.json({ success: true });
+  });
+
+  // Google login
+  app.post("/api/auth/google", async (c) => {
+    const { idToken } = await c.req.json();
+    if (!idToken) {
+      return c.json({ error: "idToken is required" }, 400);
+    }
+
+    try {
+      // Verify Google ID token via Google's tokeninfo endpoint
+      const verifyRes = await fetch(
+        `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`
+      );
+
+      if (!verifyRes.ok) {
+        return c.json({ error: "Invalid Google token" }, 401);
+      }
+
+      const payload = await verifyRes.json();
+
+      // Verify the token is for our app
+      const expectedClientId = process.env.GOOGLE_CLIENT_ID;
+      if (expectedClientId && payload.aud !== expectedClientId) {
+        return c.json({ error: "Token audience mismatch" }, 401);
+      }
+
+      const email = payload.email;
+      const name = payload.name || payload.email;
+      const avatar = payload.picture || null;
+
+      if (!email) {
+        return c.json({ error: "Email not found in token" }, 400);
+      }
+
+      // Find or create user
+      let [existingUser] = await db
+        .select()
+        .from(tables.users)
+        .where(eq(tables.users.email, email))
+        .limit(1);
+
+      if (!existingUser) {
+        const result = await db
+          .insert(tables.users)
+          .values({
+            email,
+            nickname: name,
+            avatar,
+          })
+          .returning();
+        existingUser = result[0];
+      } else {
+        // Update avatar and nickname on each login
+        await db
+          .update(tables.users)
+          .set({ nickname: name, avatar })
+          .where(eq(tables.users.id, existingUser.id));
+        existingUser.nickname = name;
+        existingUser.avatar = avatar;
+      }
+
+      return c.json({
+        user: {
+          id: String(existingUser.id),
+          email: existingUser.email,
+          name: existingUser.nickname || existingUser.email,
+          avatar: existingUser.avatar,
+        },
+      });
+    } catch (error: any) {
+      console.error("[API] Google auth error:", error.message);
+      return c.json({ error: "Authentication failed: " + error.message }, 500);
+    }
   });
 
   // ============================================
@@ -488,12 +632,12 @@ export function createApp(db: any, tables: any) {
     return c.json({ success: true });
   });
 
-  // Chat with character (Gemini)
+  // Chat with character (AI)
   app.post("/api/chat", requireAuth, async (c) => {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.ZAIWENAI_API_KEY;
     if (!apiKey) {
       return c.json(
-        { error: "AI service not configured. Add GEMINI_API_KEY to .env" },
+        { error: "AI service not configured. Add ZAIWENAI_API_KEY to .env" },
         500
       );
     }
@@ -554,13 +698,7 @@ ${historyText ? `\u6700\u8FD1\u7684\u5C0D\u8A71\u8A18\u9304\uFF1A\n${historyText
 \u8ACB\u7528\u89D2\u8272\u7684\u8EAB\u4EFD\u56DE\u8986\uFF08\u53EA\u56DE\u8986\u89D2\u8272\u7684\u5C0D\u8A71\uFF0C\u4E0D\u8981\u5176\u4ED6\u8AAA\u660E\uFF09\uFF1A`;
 
     try {
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: prompt,
-      });
-
-      const reply = response.text?.trim() || "...";
+      const reply = (await callAI(apiKey, prompt)).trim() || "...";
       console.log("[API] AI reply:", reply.substring(0, 100));
 
       return c.json({
@@ -582,7 +720,7 @@ ${historyText ? `\u6700\u8FD1\u7684\u5C0D\u8A71\u8A18\u9304\uFF1A\n${historyText
 
   // OC Interaction
   app.post("/api/oc-interact", requireAuth, async (c) => {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.ZAIWENAI_API_KEY;
     if (!apiKey) {
       return c.json({ error: "AI service not configured" }, 500);
     }
@@ -647,13 +785,7 @@ ${characterProfiles}
 }`;
 
     try {
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: prompt,
-      });
-
-      const text = response.text || "";
+      const text = await callAI(apiKey, prompt);
       console.log("[API] AI response:", text.substring(0, 200));
 
       const jsonMatch = text.match(/\{[\s\S]*\}/);
@@ -835,7 +967,7 @@ ${characterProfiles}
 
   // Auto-social
   app.post("/api/oc/auto-social", requireAuth, async (c) => {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.ZAIWENAI_API_KEY;
     if (!apiKey) {
       return c.json({ error: "AI service not configured" }, 500);
     }
@@ -911,13 +1043,7 @@ ${characterProfiles}
 }`;
 
     try {
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: prompt,
-      });
-
-      const text = response.text || "";
+      const text = await callAI(apiKey, prompt);
       const jsonMatch = text.match(/\{[\s\S]*\}/);
 
       if (jsonMatch) {
@@ -977,7 +1103,7 @@ ${characterProfiles}
 
   // Auto-chat between OCs
   app.post("/api/oc/auto-chat", async (c) => {
-    const apiKey = process.env.GEMINI_API_KEY;
+    const apiKey = process.env.ZAIWENAI_API_KEY;
     if (!apiKey) {
       return c.json({ error: "AI service not configured" }, 500);
     }
@@ -1047,13 +1173,7 @@ JSON \u683C\u5F0F\u56DE\u8986\uFF1A
 }`;
 
     try {
-      const ai = new GoogleGenAI({ apiKey });
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: prompt,
-      });
-
-      const text = response.text || "";
+      const text = await callAI(apiKey, prompt);
       const jsonMatch = text.match(/\{[\s\S]*\}/);
 
       if (jsonMatch) {

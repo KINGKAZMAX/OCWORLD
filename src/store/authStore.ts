@@ -5,6 +5,7 @@ interface User {
   id: string;
   email: string;
   name: string;
+  avatar?: string;
 }
 
 interface AuthState {
@@ -15,17 +16,10 @@ interface AuthState {
   reset: () => void;
 }
 
-// Demo mode: auto-login with mock user
-const DEMO_USER: User = {
-  id: '1',
-  email: 'demo@example.com',
-  name: 'Demo User',
-};
-
 export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
-      user: DEMO_USER, // Auto-login for demo
+      user: null,
       isChecking: false,
       setUser: (user) => set({ user }),
       setChecking: (value) => set({ isChecking: value }),
@@ -33,7 +27,7 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'oc-world-auth',
-      partialize: (state) => ({ user: state.user }), // Only persist user
+      partialize: (state) => ({ user: state.user }),
     }
   )
 );
