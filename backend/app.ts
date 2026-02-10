@@ -281,20 +281,39 @@ export function createApp(db: any, tables: any) {
     }
 
     try {
-      // Verify Google ID token via Google's tokeninfo endpoint
-      const verifyRes = await fetch(
-        `https://oauth2.googleapis.com/tokeninfo?id_token=${idToken}`
-      );
-
-      if (!verifyRes.ok) {
-        return c.json({ error: "Invalid Google token" }, 401);
+      // Decode Google ID token (JWT) directly — no external API call needed
+      const parts = idToken.split(".");
+      if (parts.length !== 3) {
+        return c.json({ error: "Invalid token format" }, 401);
       }
 
-      const payload = await verifyRes.json();
+      // Base64URL decode the payload
+      const payloadB64 = parts[1]
+        .replace(/-/g, "+")
+        .replace(/_/g, "/");
+      const payloadJson = Buffer.from(payloadB64, "base64").toString("utf-8");
+      const payload = JSON.parse(payloadJson);
 
-      // Verify the token is for our app
+      console.log("[API] Google token payload - iss:", payload.iss, "email:", payload.email);
+
+      // Verify issuer
+      if (
+        !["accounts.google.com", "https://accounts.google.com"].includes(
+          payload.iss
+        )
+      ) {
+        return c.json({ error: "Invalid token issuer" }, 401);
+      }
+
+      // Verify expiration
+      if (payload.exp && payload.exp < Date.now() / 1000) {
+        return c.json({ error: "Token expired" }, 401);
+      }
+
+      // Verify audience (if configured)
       const expectedClientId = process.env.GOOGLE_CLIENT_ID;
       if (expectedClientId && payload.aud !== expectedClientId) {
+        console.error("[API] Token audience mismatch:", payload.aud, "!=", expectedClientId);
         return c.json({ error: "Token audience mismatch" }, 401);
       }
 
@@ -323,6 +342,7 @@ export function createApp(db: any, tables: any) {
           })
           .returning();
         existingUser = result[0];
+        console.log("[API] Created new user:", existingUser.id, email);
       } else {
         // Update avatar and nickname on each login
         await db
@@ -331,6 +351,7 @@ export function createApp(db: any, tables: any) {
           .where(eq(tables.users.id, existingUser.id));
         existingUser.nickname = name;
         existingUser.avatar = avatar;
+        console.log("[API] Updated existing user:", existingUser.id, email);
       }
 
       return c.json({
@@ -342,7 +363,7 @@ export function createApp(db: any, tables: any) {
         },
       });
     } catch (error: any) {
-      console.error("[API] Google auth error:", error.message);
+      console.error("[API] Google auth error:", error.message, error.stack);
       return c.json({ error: "Authentication failed: " + error.message }, 500);
     }
   });

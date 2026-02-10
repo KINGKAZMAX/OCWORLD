@@ -77,6 +77,7 @@ export default function Login() {
   const { setUser } = useAuthStore();
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sdkLoaded, setSdkLoaded] = useState(false);
   const googleButtonRef = useRef<HTMLDivElement>(null);
 
   const googleClientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
@@ -99,16 +100,23 @@ export default function Login() {
         text: 'signin_with',
         shape: 'rectangular',
       });
+      setSdkLoaded(true);
     };
 
     // GIS SDK might not be loaded yet
     if (window.google) {
       initGoogle();
     } else {
+      let attempts = 0;
       const interval = setInterval(() => {
+        attempts++;
         if (window.google) {
           clearInterval(interval);
           initGoogle();
+        } else if (attempts > 50) {
+          // 5 seconds timeout
+          clearInterval(interval);
+          setError('Google 登入服務載入失敗，請檢查網路連線後重新整理頁面');
         }
       }, 100);
       return () => clearInterval(interval);
@@ -120,6 +128,7 @@ export default function Login() {
     setError(null);
 
     try {
+      console.log('[Login] Google callback received, sending to backend...');
       const res = await fetch('/api/auth/google', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -127,16 +136,24 @@ export default function Login() {
       });
 
       const data = await res.json();
+      console.log('[Login] Backend response:', res.status, data);
 
       if (!res.ok) {
-        setError(data.error || '登入失敗');
+        setError(data.error || '登入失敗 (' + res.status + ')');
+        setIsLoggingIn(false);
+        return;
+      }
+
+      if (!data.user || !data.user.id) {
+        setError('登入回應格式錯誤');
         setIsLoggingIn(false);
         return;
       }
 
       setUser(data.user);
-    } catch {
-      setError('網路錯誤，請稍後再試');
+    } catch (err: any) {
+      console.error('[Login] Error:', err);
+      setError('網路錯誤: ' + (err.message || '請稍後再試'));
       setIsLoggingIn(false);
     }
   };
@@ -221,8 +238,11 @@ export default function Login() {
           {isLoggingIn ? (
             <div className="py-3 text-gray-500">登入中...</div>
           ) : googleClientId ? (
-            <div className="flex justify-center">
+            <div className="flex flex-col items-center gap-2">
               <div ref={googleButtonRef} />
+              {!sdkLoaded && !error && (
+                <p className="text-gray-400 text-xs">載入 Google 登入...</p>
+              )}
             </div>
           ) : (
             <p className="text-gray-400 text-sm">
