@@ -5,34 +5,30 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { eq, desc, sql, and, or, ne, inArray } from "drizzle-orm";
+import OpenAI from "openai";
 
 // ---------- Types ----------
 type Env = { Variables: { user: { id: string; email: string; name: string } } };
 
+// ---------- OpenAI client (Ark API) ----------
+function createClient() {
+  const apiKey = (process.env.ARK_API_KEY || "").trim();
+  if (!apiKey) throw new Error("Missing ARK_API_KEY");
+  return new OpenAI({
+    apiKey,
+    baseURL: "https://ark.cn-beijing.volces.com/api/v3",
+    timeout: 120000,
+  });
+}
+
 // ---------- AI API helper ----------
-async function callAI(apiKey: string, prompt: string): Promise<string> {
-  const response = await fetch(
-    "https://back.zaiwenai.com/api/v1/ai/chat/completions",
-    {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      body: JSON.stringify({
-        model: "gemini-3-pro",
-        messages: [{ role: "user", content: prompt }],
-      }),
-    }
-  );
-
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`AI API error ${response.status}: ${errorText}`);
-  }
-
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || "";
+async function callAI(prompt: string): Promise<string> {
+  const client = createClient();
+  const completion = await client.chat.completions.create({
+    model: "deepseek-v3-2-251201",
+    messages: [{ role: "user", content: prompt }],
+  });
+  return completion.choices?.[0]?.message?.content || "";
 }
 
 // ---------- Prompt templates ----------
@@ -442,10 +438,12 @@ export function createApp(db: any, tables: any) {
   // Protected Endpoints
   // ============================================
 
-  // Generate images (Doubao API)
+  // Generate images (Ark API - doubao-seedream)
   app.post("/api/generate", requireAuth, async (c) => {
-    const apiKey = process.env.ARK_API_KEY;
-    if (!apiKey) {
+    let client: OpenAI;
+    try {
+      client = createClient();
+    } catch {
       return c.json(
         { error: "AI service not configured. Please add ARK_API_KEY to .env" },
         500
@@ -476,31 +474,14 @@ export function createApp(db: any, tables: any) {
       const images: string[] = [];
 
       for (let i = 0; i < 4; i++) {
-        const response = await fetch(
-          "https://ark.cn-beijing.volces.com/api/v3/images/generations",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${apiKey}`,
-            },
-            body: JSON.stringify({
-              model: "doubao-seedream-4-5-251128",
-              prompt: fullPrompt,
-              response_format: "url",
-            }),
-          }
-        );
+        const response = await client.images.generate({
+          model: "doubao-seedream-4-5-251128",
+          prompt: fullPrompt,
+          response_format: "url",
+        });
 
-        if (!response.ok) {
-          const errorData = await response.text();
-          console.error("[API] Doubao API error:", errorData);
-          throw new Error(`Doubao API error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        if (data.data && data.data.length > 0 && data.data[0].url) {
-          images.push(data.data[0].url);
+        if (response.data?.[0]?.url) {
+          images.push(response.data[0].url);
         }
       }
 
@@ -634,14 +615,6 @@ export function createApp(db: any, tables: any) {
 
   // Chat with character (AI)
   app.post("/api/chat", requireAuth, async (c) => {
-    const apiKey = process.env.ZAIWENAI_API_KEY;
-    if (!apiKey) {
-      return c.json(
-        { error: "AI service not configured. Add ZAIWENAI_API_KEY to .env" },
-        500
-      );
-    }
-
     const { characterId, message, history } = await c.req.json();
     console.log(
       "[API] POST /api/chat - characterId:",
@@ -698,7 +671,7 @@ ${historyText ? `\u6700\u8FD1\u7684\u5C0D\u8A71\u8A18\u9304\uFF1A\n${historyText
 \u8ACB\u7528\u89D2\u8272\u7684\u8EAB\u4EFD\u56DE\u8986\uFF08\u53EA\u56DE\u8986\u89D2\u8272\u7684\u5C0D\u8A71\uFF0C\u4E0D\u8981\u5176\u4ED6\u8AAA\u660E\uFF09\uFF1A`;
 
     try {
-      const reply = (await callAI(apiKey, prompt)).trim() || "...";
+      const reply = (await callAI(prompt)).trim() || "...";
       console.log("[API] AI reply:", reply.substring(0, 100));
 
       return c.json({
@@ -720,11 +693,6 @@ ${historyText ? `\u6700\u8FD1\u7684\u5C0D\u8A71\u8A18\u9304\uFF1A\n${historyText
 
   // OC Interaction
   app.post("/api/oc-interact", requireAuth, async (c) => {
-    const apiKey = process.env.ZAIWENAI_API_KEY;
-    if (!apiKey) {
-      return c.json({ error: "AI service not configured" }, 500);
-    }
-
     const { characters, scenario, saveHistory } = await c.req.json();
     console.log(
       "[API] POST /api/oc-interact - characters:",
@@ -785,8 +753,7 @@ ${characterProfiles}
 }`;
 
     try {
-      const text = await callAI(apiKey, prompt);
-      console.log("[API] AI response:", text.substring(0, 200));
+      const text = await callAI(prompt);
 
       const jsonMatch = text.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
@@ -967,11 +934,6 @@ ${characterProfiles}
 
   // Auto-social
   app.post("/api/oc/auto-social", requireAuth, async (c) => {
-    const apiKey = process.env.ZAIWENAI_API_KEY;
-    if (!apiKey) {
-      return c.json({ error: "AI service not configured" }, 500);
-    }
-
     const { ocId } = await c.req.json();
 
     if (!ocId) {
@@ -1043,7 +1005,7 @@ ${characterProfiles}
 }`;
 
     try {
-      const text = await callAI(apiKey, prompt);
+      const text = await callAI(prompt);
       const jsonMatch = text.match(/\{[\s\S]*\}/);
 
       if (jsonMatch) {
@@ -1103,11 +1065,6 @@ ${characterProfiles}
 
   // Auto-chat between OCs
   app.post("/api/oc/auto-chat", async (c) => {
-    const apiKey = process.env.ZAIWENAI_API_KEY;
-    if (!apiKey) {
-      return c.json({ error: "AI service not configured" }, 500);
-    }
-
     const { oc1Id, oc2Id, previousDialogues, topic } = await c.req.json();
 
     if (!oc1Id || !oc2Id) {
@@ -1173,7 +1130,7 @@ JSON \u683C\u5F0F\u56DE\u8986\uFF1A
 }`;
 
     try {
-      const text = await callAI(apiKey, prompt);
+      const text = await callAI(prompt);
       const jsonMatch = text.match(/\{[\s\S]*\}/);
 
       if (jsonMatch) {
