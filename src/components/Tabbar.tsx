@@ -15,7 +15,7 @@ export default function Tabbar() {
   const pathname = location.pathname;
   
   // Hide tabbar on certain pages
-  const hiddenPaths = ["/chat/", "/character/", "/login"];
+  const hiddenPaths = ["/chat/", "/character/", "/login", "/defi"];
   const shouldHide = hiddenPaths.some(p => pathname.startsWith(p));
   
   if (shouldHide) return null;

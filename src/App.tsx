@@ -17,6 +17,10 @@ import Icebreaker from "./pages/Icebreaker";
 import OCInteraction from "./pages/OCInteraction";
 import OCSocial from "./pages/OCSocial";
 import Login from "./pages/Login";
+import DeFiDashboard from "./pages/DeFiDashboard";
+import DeFiStaking from "./pages/DeFiStaking";
+import DeFiPools from "./pages/DeFiPools";
+import DeFiGovernance from "./pages/DeFiGovernance";
 import { useAuthStore } from "./store/authStore";
 import { client } from "./lib/api";
 
@@ -133,6 +137,26 @@ function App() {
                 <Route path="/oc-social" element={
                   <ProtectedRoute>
                     <OCSocial />
+                  </ProtectedRoute>
+                } />
+                <Route path="/defi" element={
+                  <ProtectedRoute>
+                    <DeFiDashboard />
+                  </ProtectedRoute>
+                } />
+                <Route path="/defi/stake" element={
+                  <ProtectedRoute>
+                    <DeFiStaking />
+                  </ProtectedRoute>
+                } />
+                <Route path="/defi/pools" element={
+                  <ProtectedRoute>
+                    <DeFiPools />
+                  </ProtectedRoute>
+                } />
+                <Route path="/defi/governance" element={
+                  <ProtectedRoute>
+                    <DeFiGovernance />
                   </ProtectedRoute>
                 } />
               </Routes>
