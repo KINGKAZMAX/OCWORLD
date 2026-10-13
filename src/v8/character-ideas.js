@@ -9,5 +9,5 @@ export function completeCharacterDraft(input={},selection='auto',sequence=0){
  const authored=[input.name,input.concept,input.appearance].filter(Boolean).join(' ');
  const idea=CHARACTER_IDEAS.find(x=>x.id===selection)||CHARACTER_IDEAS.find(x=>x.keywords.test(authored))||CHARACTER_IDEAS[sequence%CHARACTER_IDEAS.length];
  const appearance=String(input.appearance||'').trim();
- return {...input,name:String(input.name||'').trim()||idea.name,concept:String(input.concept||'').trim()||idea.concept,appearance:appearance||idea.appearance,personality:input.personality||idea.personality,style:input.style||idea.style,sprite:input.sprite||idea.sprite,artDirection:input.artDirection||'sevnzel',avatar:input.avatar||'assets/ocworld/sevnzel-test-v1.png',imageSource:input.imageSource||'preset',ideaId:idea.id};
+ return {...input,name:String(input.name||'').trim()||idea.name,concept:String(input.concept||'').trim()||idea.concept,appearance:appearance||idea.appearance,personality:input.personality||idea.personality,style:input.style||idea.style,sprite:input.sprite||idea.sprite,artDirection:input.artDirection||'free',avatar:input.avatar||'assets/ocworld/sevnzel-test-v1.png',imageSource:input.imageSource||'preset',ideaId:idea.id};
 }
