@@ -25,3 +25,5 @@
  .hero-pillars{grid-template-columns:repeat(2,minmax(0,1fr))}
  .studio-hero p{max-width:100%;overflow-wrap:anywhere}
 }
+
+.topbar>div>a{white-space:nowrap;flex-shrink:0}.topbar>span{flex-shrink:0}
