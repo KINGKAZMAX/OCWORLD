@@ -35,3 +35,9 @@ User-selected relay: https://www.abc-ai.cn/v1, documented at https://abc-ai.cn/d
 API deployment includes only api/chat.js, api/generate-image.js, api/health.js and the two ocworld helper modules. Required Vercel variables: CHAT_API_KEY, CHAT_BASE_URL, CHAT_MODEL, IMAGE_GEN_API_KEY, IMAGE_GEN_BASE_URL; IMAGE_GEN_MODEL optional when image availability is enabled. Key contents must remain server-side. Re-deploy backend after changing production environment variables.
 
 The world is a browser-hosted scripted simulation. It pauses when closed. Global multiplayer requires configured Supabase; cloud account sync, persistent server simulation, Live2D/voice and wallet minting are outside this release. Base map/sprite notices and third-party asset attributions remain shipped with the world; this release is a noncommercial prototype.
+
+## Banana provider adapter
+
+GRSAI public model pricing verified 2026-10-14: nano-banana-2-lite ¥0.022/request; nano-banana-2.1 ¥0.06/request, advertised equal 1K/2K/4K pricing. These are vendor published prices, not tested billing or quality. Official source https://grsai.com/dashboard/models. Chosen main model nano-banana-2.1, economical alternative nano-banana-2-lite.
+
+The deployed adapter submits /v1/draw/nano-banana with webHook=-1, signs the returned task ID with a server-only secret, polls /v1/draw/result, and immediately stores the returned image instead of retaining the two-hour external URL. Uploaded/generated image references are sent as base64 to preserve design anchors. Server variables GRSAI_API_KEY, GRSAI_IMAGE_MODEL (default nano-banana-2.1), GRSAI_BASE_URL (default https://grsaiapi.com). Until a GRSAI key is provided, the existing relay configuration remains active and image generation is explicitly unavailable. Adapter tests do not constitute a successful live generation.
