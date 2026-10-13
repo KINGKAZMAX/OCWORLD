@@ -8,7 +8,7 @@ const repo=createRepository(localStorage);
 setLocale(readLocale(localStorage));
 const BODY_IDS=['red_normal','green_normal','boy','lass','youngster','beauty','gentleman','fat_man'];
 const BODY_NAMES=['红色旅人','绿色旅人','少年','少女','小小探险家','优雅旅人','绅士','大个子'];
-const PRESETS=[{name:'星遥',avatar:'assets/ocworld/xingyao.png',concept:'收集沿途故事的星际信使，想找到属于自己的家。',appearance:'银色短发、青绿色眼睛、红黑机能夹克、星形吊坠',personality:'curious'},{name:'小智',avatar:'assets/zealwish-main-character.webp',concept:'机灵而温暖的伙伴，喜欢探索未知的小镇。',appearance:'红黑色服装，清晰的冒险者轮廓',personality:'playful'}];
+const PRESETS=[{name:'零拍',avatar:'assets/ocworld/sevnzel-test-v1.png',concept:'记录城市声音的地下音乐信使，用节奏为陌生人搭起桥梁。',appearance:'深灰短发、钴蓝发束、青柠三角发夹、黑白机能外套、橘红围巾、腰间录音器',personality:'curious'},{name:'星遥',avatar:'assets/ocworld/xingyao.png',concept:'收集沿途故事的星际信使，想找到属于自己的家。',appearance:'银色短发、青绿色眼睛、红黑机能夹克、星形吊坠',personality:'curious'},{name:'小智',avatar:'assets/zealwish-main-character.webp',concept:'机灵而温暖的伙伴，喜欢探索未知的小镇。',appearance:'红黑色服装，清晰的冒险者轮廓',personality:'playful'}];
 const NAV=[['home','我的角色','01'],['create','创建角色','02'],['talk','对话','03'],['world','世界','04'],['memory','记忆','05'],['rewind','回溯','06'],['settings','设置与备份','07']];
 const now=()=>new Date().toISOString();
 function apiBase(){return (localStorage.getItem('ocworld.apiBase')||window.OCWORLD_CONFIG?.apiBase||'').replace(/\/$/,'');}
