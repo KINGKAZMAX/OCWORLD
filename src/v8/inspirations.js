@@ -1,5 +1,6 @@
 const atlas='assets/ocworld/inspiration-atlas.png';
-export const INSPIRATIONS=[
+import {COLLECTION_THIRTY} from './collection-thirty.js';
+export const INSPIRATIONS=[...COLLECTION_THIRTY,
 {id:'arc-ig',name:'弧弧',nameEn:'Huhu',concept:'收集走失電波的城市信使，用小小的收音機傳遞善意。',conceptEn:'A city courier who collects lost radio signals and shares kindness through a tiny radio.',appearance:'約4頭身、炭灰短髮、白色小發束、粉色圓形耳機、寬鬆白灰衛衣、紫色圓塊補丁、粉色大手套、寬腿灰褲、巨大圓潤白鞋、膠囊形收音機挎包',personality:'playful',style:'anime',sprite:'youngster',avatar:'assets/ocworld/sevnzel-ig-v2.png',artDirection:'sevnzel',studyVersion:'ig-v2'},
 {id:'zero-beat',name:'零拍',nameEn:'Zero Beat',concept:'記錄城市聲音的地下音樂信使，用節奏為陌生人搭起橋梁。',conceptEn:'An underground music courier who records city sounds and connects strangers through rhythm.',appearance:'深灰短髮、鈷藍偏分發束、青檸三角髮夾、黑白不對稱機能外套、鈷藍大袖、橘紅圍巾、腰間錄音器、厚底運動鞋',personality:'curious',style:'techwear',sprite:'green_normal',avatar:'assets/ocworld/sevnzel-test-v1.png',artDirection:'sevnzel'},
 {id:'neo-aokizy',name:'霓音',nameEn:'Neo',concept:'收藏未被聽見的聲音，用音樂回應每一段心事。',conceptEn:'An idol who collects unheard sounds and answers quiet stories through music.',appearance:'黑白偏分短髮、薄荷三角髮夾、不對稱黑白機能服、粉綠音響包',personality:'gentle',style:'painterly',sprite:'lass',avatar:'assets/ocworld/style-test-v1.png',artDirection:'aokizy'},

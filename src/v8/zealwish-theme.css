@@ -28,3 +28,6 @@
 
 .topbar>div>a{white-space:nowrap;flex-shrink:0}.topbar>span{flex-shrink:0}
 .style-study{padding:26px 0;margin-top:30px;border-top:1px solid var(--line-red);border-bottom:1px solid var(--line)}.style-study h2{font-size:26px;line-height:1.35;margin:16px 0}.style-study p{font-size:12px;line-height:1.9;color:var(--muted);max-width:760px}.style-study>a{font-size:11px;color:var(--red)}
+
+/* Preserve deliberate pixel edges in adventure portraits. */
+.pixel-plane img{image-rendering:pixelated}
