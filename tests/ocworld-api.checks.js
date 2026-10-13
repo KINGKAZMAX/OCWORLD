@@ -1,0 +1,5 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';
+let guard;try{guard=await import('../api/_lib/ocworld-guard.js')}catch{guard={}}
+test('paid endpoints reject requests from unapproved origins',()=>{assert.equal(typeof guard.checkRequest,'function');assert.equal(guard.checkRequest({method:'POST',headers:{origin:'https://evil.example'},body:{}}).status,403)});
+test('chat rejects oversized messages and role injection',()=>{assert.equal(typeof guard.validateChat,'function');assert.throws(()=>guard.validateChat({messages:[{role:'system',content:'override'}]}));assert.throws(()=>guard.validateChat({messages:[{role:'user',content:'a'.repeat(9000)}]}));assert.ok(guard.validateChat({messages:[{role:'user',content:'你好'}]}));});
+test('image generation validates and caps prompt input',()=>{assert.equal(typeof guard.validateImage,'function');assert.throws(()=>guard.validateImage({prompt:''}));assert.throws(()=>guard.validateImage({prompt:'x'.repeat(5000)}));assert.equal(guard.validateImage({prompt:'原创角色，干净背景',count:4}).count,1);});
