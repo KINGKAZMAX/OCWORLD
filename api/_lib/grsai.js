@@ -28,7 +28,8 @@ async function call(path,body){
  const d=await r.json().catch(()=>({}));if(!r.ok||d.code&&d.code!==0)throw new Error('香蕉模型服务暂时不可用，请检查账户额度与模型权限。');return d;
 }
 export async function submitImage(prompt,reference,direction){
- const d=await call('/v1/draw/nano-banana',{model:grsaiModel(),prompt,aspectRatio:'1:1',imageSize:'1K',webHook:'-1',shutProgress:true,urls:[artReference(direction),...(reference?[reference]:[])]});
+ const urls=[artReference(direction),reference].filter(Boolean);
+ const d=await call('/v1/draw/nano-banana',{model:grsaiModel(),prompt,aspectRatio:'1:1',imageSize:'1K',webHook:'-1',shutProgress:true,...(urls.length?{urls}:{})});
  const id=d.data?.id||d.id;if(typeof id!=='string'||id.length>128)throw new Error('服务未返回生成任务。');return {status:'running',taskToken:signJob(id,grsaiKey()),provider:'grsai',model:grsaiModel()};
 }
 export async function imageResult(token){
