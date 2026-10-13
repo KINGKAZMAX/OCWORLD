@@ -59,3 +59,7 @@ Validation: 19 repository/API/library/locale checks and 20 world checks, success
 ## Separate Aokizy and Sevnzel directions
 
 Both art directions remain selectable in Create. Prompt construction and server enforcement share one canonical registry, with different style locks and reference URLs. The selected artDirection is saved with the character, exported in backups and Character Card extensions, and preserved on rename. The Aokizy Neo sample remains in the inspiration library alongside Sevnzel Zero Beat. Transparent output requirements apply to both. Automated validation covers both client/server prompts, no artist cross-contamination and invalid-direction rejection; 40 total checks pass. Provider availability limitation remains unchanged.
+
+## Instagram study V2
+
+Actual public Instagram profile and post inspected in browser: https://www.instagram.com/se7nzel/ and https://www.instagram.com/se7nzel/p/DO-HlkpibDd/ . Current visual study emphasizes simplified graphic-toy proportions, large hands/shoes, capsule-and-triangle shape language, sparse facial marks and restrained charcoal/ivory/pink/lavender colors. New original Huhu transparent template becomes featured; previous Zero Beat and separate Aokizy Neo remain available. Shared Sevnzel prompt/reference updates to Instagram V2. See docs/SEVNZEL-INSTAGRAM-STUDY.md. Generated prompt versions are preserved on rename and updated when creating new prompts.
