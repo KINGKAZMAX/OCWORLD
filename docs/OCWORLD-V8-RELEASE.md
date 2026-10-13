@@ -55,3 +55,7 @@ Latest direction supersedes Aokizy with Sevnzel／セブンゼル. Primary sourc
 Front/back prompt rendering lock is identical and tested. GRSAI receives the public Zero Beat reference plus optional uploaded reference. GPT Image receives transparent PNG output settings; web rejects opaque model results without replacing character art. Model style consistency still requires visual review. No GRSAI key has been supplied; the live relay still lacks an image model. Presets and actual chat remain usable; this deployed style adapter is not a verified paid image generation.
 
 Validation: 19 repository/API/library/locale checks and 20 world checks, successful build, real transparency inspection and browser template creation acceptance.
+
+## Separate Aokizy and Sevnzel directions
+
+Both art directions remain selectable in Create. Prompt construction and server enforcement share one canonical registry, with different style locks and reference URLs. The selected artDirection is saved with the character, exported in backups and Character Card extensions, and preserved on rename. The Aokizy Neo sample remains in the inspiration library alongside Sevnzel Zero Beat. Transparent output requirements apply to both. Automated validation covers both client/server prompts, no artist cross-contamination and invalid-direction rejection; 40 total checks pass. Provider availability limitation remains unchanged.

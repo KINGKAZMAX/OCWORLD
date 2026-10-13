@@ -1,4 +1,4 @@
-import {STYLE_REFERENCE_URL} from './art-direction.js';
+import {artReference} from './art-direction.js';
 import {createHmac,timingSafeEqual} from 'node:crypto';
 export const grsaiKey=()=>process.env.GRSAI_API_KEY||'';
 export const grsaiModel=()=>process.env.GRSAI_IMAGE_MODEL||'nano-banana-2.1';
@@ -27,8 +27,8 @@ async function call(path,body){
  const r=await fetch(base()+path,{method:'POST',headers:{'Content-Type':'application/json',Authorization:`Bearer ${grsaiKey()}`},body:JSON.stringify(body),signal:AbortSignal.timeout(20000)});
  const d=await r.json().catch(()=>({}));if(!r.ok||d.code&&d.code!==0)throw new Error('香蕉模型服务暂时不可用，请检查账户额度与模型权限。');return d;
 }
-export async function submitImage(prompt,reference){
- const d=await call('/v1/draw/nano-banana',{model:grsaiModel(),prompt,aspectRatio:'1:1',imageSize:'1K',webHook:'-1',shutProgress:true,urls:[STYLE_REFERENCE_URL,...(reference?[reference]:[])]});
+export async function submitImage(prompt,reference,direction){
+ const d=await call('/v1/draw/nano-banana',{model:grsaiModel(),prompt,aspectRatio:'1:1',imageSize:'1K',webHook:'-1',shutProgress:true,urls:[artReference(direction),...(reference?[reference]:[])]});
  const id=d.data?.id||d.id;if(typeof id!=='string'||id.length>128)throw new Error('服务未返回生成任务。');return {status:'running',taskToken:signJob(id,grsaiKey()),provider:'grsai',model:grsaiModel()};
 }
 export async function imageResult(token){
