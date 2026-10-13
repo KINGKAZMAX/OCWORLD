@@ -242,9 +242,10 @@ export default function WorldView() {
   const [font, setFont] = useState<string>(() => {
     try { const id = localStorage.getItem('oc-world-font'); return FONTS.find((f) => f.id === id)?.css || FONT_DEFAULT; } catch { return FONT_DEFAULT; }
   });
-  const [lang, setLang] = useState<'zh' | 'en'>(() => { try { return localStorage.getItem('oc-lang') === 'en' ? 'en' : 'zh'; } catch { return 'zh'; } });
+  const [lang, setLang] = useState<'zh' | 'en'>(() => { try { return (localStorage.getItem('ocworld.locale') || localStorage.getItem('oc-lang')) === 'en' ? 'en' : 'zh'; } catch { return 'zh'; } });
   const L = (zh: string, en: string) => (lang === 'en' ? en : zh);   // JSX 界面文案(角色名/台词/物种名等「内容」保持原样,只翻 UI 外壳)
-  const toggleLang = () => setLang((p) => { const n = p === 'en' ? 'zh' : 'en'; try { localStorage.setItem('oc-lang', n); } catch { /* ignore */ } return n; });
+  const toggleLang = () => setLang((p) => { const n = p === 'en' ? 'zh' : 'en'; try { localStorage.setItem('oc-lang', n); localStorage.setItem('ocworld.locale', n); } catch { /* ignore */ } return n; });
+  useEffect(() => { const sync = (e: StorageEvent) => { if (e.key === 'ocworld.locale' || e.key === 'oc-lang') setLang(localStorage.getItem('ocworld.locale') === 'en' ? 'en' : 'zh'); }; window.addEventListener('storage', sync); return () => window.removeEventListener('storage', sync); }, []);
   const [regionC, setRegionC] = useState<[number, number]>(() => (GLOBAL ? REGION_DEFAULT : loadRegion()));  // 全球模式固定同一个镇
   const [showHelp, setShowHelp] = useState<boolean>(() => { try { return !localStorage.getItem('oc-world-seen'); } catch { return true; } });
   const dismissHelp = () => { setShowHelp(false); try { localStorage.setItem('oc-world-seen', '1'); } catch { /* ignore */ } };

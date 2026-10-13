@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';
+import {translate,readLocale,timeline} from '../frontend-v4/src/v8/i18n.js';
+test('Chinese defaults and saved English survives reload',()=>{assert.equal(readLocale({getItem:()=>null}),'zh');assert.equal(readLocale({getItem:()=> 'en'}),'en');assert.equal(readLocale({getItem:()=> 'bad'}),'zh');assert.equal(translate('创建角色','en'),'Create character');assert.equal(translate('创建角色','zh'),'创建角色');assert.equal(translate('自定义名字：星遥','en'),'自定义名字：星遥');});
+test('rewind orders genuine events and preserves authored text',()=>{const c={characterId:'stable',name:'星遥',createdAt:'2026-10-01',messages:[{id:'m',role:'assistant',text:'原始回答',at:'2026-10-03'}],moments:[{id:'w',text:'真实经历',at:'2026-10-04'}],memories:[]};const rows=timeline(c);assert.deepEqual(rows.map(r=>r.id),['w','m','birth-stable']);assert.equal(rows[0].text,'真实经历');assert.equal(c.name,'星遥');});
